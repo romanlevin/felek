@@ -14,7 +14,19 @@ For each created job, Felek creates two files to store the process's stdout and 
 
 For querying logs, Felek use gRPC's streaming functionality to stream logs line-by-line, optionally continuing to stream after the existing content of the log file is exhaust. Logs are assumed to consist of lines of UTF-8 encoded text.
 
-Connections from the client to the server will be encrypted and authenticated using mTLS. 
+Connections from the client to the server will be encrypted and authenticated using mTLS.
+
+## mTLS setup
+
+### Authentication
+
+We create a self-signed root X.509 CA  and an intermediate CA signed by the root.
+The intermediate CA is then used to sign both server and client certificates.
+The client and server then use the intermediate CA to verify each other.
+
+### Authorization
+
+We authorize the user to either "user" or "admin" privileges based on the CN section of the client certificate.
 
 
 ## gRPC spec
