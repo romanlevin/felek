@@ -20,9 +20,11 @@ Connections from the client to the server will be encrypted and authenticated us
 
 ### Authentication
 
-We create a self-signed root X.509 CA  and an intermediate CA signed by the root.
+We create a self-signed root X.509 CA and an intermediate CA signed by the root.
 The intermediate CA is then used to sign both server and client certificates.
 The client and server then use the intermediate CA to verify each other.
+
+All communication will use TLS 1.3 and support the cipher suites offered for TLS 1.3 by [`crypto/tls`](https://golang.org/pkg/crypto/tls/) (currently `TLS_AES_128_GCM_SHA256`, `TLS_AES_256_GCM_SHA384` and `TLS_CHACHA20_POLY1305_SHA256`, in that order). Other configuration settings will use the `crypto/tls` [defaults](https://golang.org/pkg/crypto/tls/#Config).
 
 ### Authorization
 
