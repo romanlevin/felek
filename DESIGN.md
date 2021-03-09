@@ -6,7 +6,7 @@ Felek runs arbitrary Unix processes ("jobs") on the server machine, allowing a c
 
 Felek uses Go's `exec.Cmd` to run external processes, and provides a gRPC interface for clients.
 
-When a `Start` request is received, Felek will try to start an external process using the provided settings (command path, arguments, environment variables, and a working directory path). If the process was started successfully, Felek will generate a unique ID for it an store it in a key-value store for later queries.
+When a `Start` request is received, Felek will try to start an external process using the provided settings (command path, arguments, environment variables, and a working directory path). If the process was started successfully, Felek will generate a unique UUID for it an store it in a key-value store for later queries.
 
 The key-value store for started jobs is protected by an `RWMutex` to allow for many readers or a single writer. `Start` and `Stop` require a write lock, while other RPCs require a read lock.
 
@@ -65,9 +65,9 @@ message JobStatus {
     int64 userTime = 6; // Elapsed user time, in nanoseconds
 }
 
-// A unique ID of a started job
+// A unique ID of a started job (a UUID string)
 message JobID {
-    int64 value = 1;
+    string value = 1;
 }
 
 // Represents a single line of logs
