@@ -28,8 +28,7 @@ All communication will use TLS 1.3 and support the cipher suites offered for TLS
 
 ### Authorization
 
-We authorize the user to either "user" or "admin" privileges based on the CN section of the client certificate.
-
+We use the Common Name section of the client certificate to identify the user. The user who started the job is made the job's owner, and only the job owner can stop it.
 
 ## gRPC spec
 
@@ -57,9 +56,10 @@ message LogsRequest {
 
 message JobStatus {
     JobID id = 1; // A unique ID
+    string user = 2; // The job owner
     oneof jobStatus {
-        RunningJob runningJob = 2;
-        StoppedJob stoppedJob = 3;
+        RunningJob runningJob = 3;
+        StoppedJob stoppedJob = 4;
     }
 }
 
