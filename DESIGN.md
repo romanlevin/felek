@@ -57,7 +57,7 @@ message LogsRequest {
 
 message JobStatus {
     JobID id = 1; // A unique ID
-    oneof JobStatus {
+    oneof jobStatus {
         RunningJob runningJob = 2;
         StoppedJob stoppedJob = 3;
     }
@@ -70,10 +70,13 @@ message RunningJob {
 }
 
 message StoppedJob {
-    int64 exitCode = 1; // The exit code of the job's process
-    int64 systemTime = 2; // Elapsed system time, in nanoseconds
-    int64 userTime = 3; // Elapsed user time, in nanoseconds
-    bool stopped = 4; // Was the job stopped by a user
+    oneof exit {
+        int64 exitCode = 1; // The exit code of the job's process
+        string exitError = 2; // The error string in case a job's processes was killed by a signal
+    }
+    int64 systemTime = 3; // Elapsed system time, in nanoseconds
+    int64 userTime = 4; // Elapsed user time, in nanoseconds
+    bool stopped = 5; // Was the job stopped by a user
 }
 
 // A unique ID of a started job (a UUID string)
