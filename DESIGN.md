@@ -57,12 +57,23 @@ message LogsRequest {
 
 message JobStatus {
     JobID id = 1; // A unique ID
-    int64 pid = 2; // PID of the job's process
-    bool exited = 3; // Whether the job's process has exited
-    // The following are set after a process has exited
-    int64 exitCode = 4; // The exit code of the job's process
-    int64 systemTime = 5; // Elapsed system time, in nanoseconds
-    int64 userTime = 6; // Elapsed user time, in nanoseconds
+    oneof JobStatus {
+        RunningJob runningJob = 2;
+        StoppedJob stoppedJob = 3;
+    }
+}
+
+message RunningJob {
+    // XXX: Don't know if we only want this available for running processes,
+    //      but otherwise I'm not sure what I can put in the RunningJob message
+    int64 pid = 1; // PID of the job's root process
+}
+
+message StoppedJob {
+    int64 exitCode = 1; // The exit code of the job's process
+    int64 systemTime = 2; // Elapsed system time, in nanoseconds
+    int64 userTime = 3; // Elapsed user time, in nanoseconds
+    bool stopped = 4; // Was the job stopped by a user
 }
 
 // A unique ID of a started job (a UUID string)
