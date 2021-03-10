@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+option go_package = "github.com/romanlevin/felek/jobs";
+
+package jobs;
+
+service Jobs {
+    rpc Start (JobStartRequest) returns (JobStatus);
+    rpc Stop (JobID) returns (JobStatus);
+    rpc Status (JobID) returns (JobStatus);
+    rpc Stdout (LogsRequest) returns (stream LogLine);
+    rpc Stderr(LogsRequest) returns (stream LogLine);
+}
+
+message JobStartRequest {
+    string path = 1;  // Path to executable
+    repeated string args = 2; // Represents argv, passed to the executable
+}
+
+message LogsRequest {
+    JobID id = 1; // ID of the job whose logs we want to get
+    bool follow = 2; // Keep streaming the logs as they come in
+    bool tail = 3; // If `follow=true`, don't stream existing lines before following
+}
+
+message JobStatus {
+    JobID id = 1; // A unique ID
+    oneof jobState {
+        RunningJob runningJob = 2;
+        StoppedJob stoppedJob = 3;
+    }
+}
+
+message RunningJob {
+    // XXX: Don't know if we only want this available for running processes,
+    //      but otherwise I'm not sure what I can put in the RunningJob message
+    int64 pid = 1; // PID of the job's root process
+}
+
+message StoppedJob {
+    oneof exit {
+        int64 exitCode = 1; // The exit code of the job's process
+        string exitError = 2; // The error string in case a job's processes was killed by a signal
+    }
+    int64 systemTime = 3; // Elapsed system time, in nanoseconds
+    int64 userTime = 4; // Elapsed user time, in nanoseconds
+    bool stopped = 5; // Was the job stopped by a user
+}
+
+// A unique ID of a started job (a UUID string)
+message JobID {
+    string value = 1;
+}
+
+// Represents a single line of logs
+message LogLine {
+    string value = 1;
+}
