@@ -51,6 +51,13 @@ func (j *job) status() *pb.JobStatus {
 		Id: &pb.JobID{Value: j.id},
 	}
 
+	if j.running() {
+		status.JobState = &pb.JobStatus_RunningJob{
+			RunningJob: &pb.RunningJob{Pid: int64(j.cmd.Process.Pid)},
+		}
+		return status
+	}
+
 	if j.exitedWithExitCode() {
 		status.JobState = &pb.JobStatus_StoppedJob{
 			StoppedJob: &pb.StoppedJob{
@@ -61,13 +68,6 @@ func (j *job) status() *pb.JobStatus {
 				UserTime:   int64(cmd.ProcessState.UserTime()),
 				Stopped:    j.stopped,
 			},
-		}
-		return status
-	}
-
-	if j.running() {
-		status.JobState = &pb.JobStatus_RunningJob{
-			RunningJob: &pb.RunningJob{Pid: int64(j.cmd.Process.Pid)},
 		}
 		return status
 	}
