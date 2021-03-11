@@ -7,13 +7,16 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
+const gracefulStopTimeout = 10 * time.Second
+
 func main() {
-	// Catch SIGINT to shut down gracefully
+	// Catch SIGINT and SIGTERM to shut down gracefully
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(signals)
 
 	lis, err := net.Listen("tcp", ":12345")
@@ -39,6 +42,7 @@ func main() {
 
 	log.Print("Serving gRPC service")
 
+	// Wait for an interrupt
 	<-signals
 
 	log.Print("Shutting down server")
@@ -48,8 +52,8 @@ func main() {
 		gRPCServer.GracefulStop()
 	}()
 
-	// Force shutdown if GraceStop is taking a while
-	t := time.NewTimer(10 * time.Second)
+	// Force shutdown if GracefulStop is taking a while
+	t := time.NewTimer(gracefulStopTimeout)
 	select {
 	case <-t.C:
 		gRPCServer.Stop()
