@@ -39,11 +39,7 @@ func main() {
 
 	log.Print("Serving gRPC service")
 
-	// Wait for an interrupt
-	select {
-	case <-signals:
-		break
-	}
+	<-signals
 
 	log.Print("Shutting down server")
 
