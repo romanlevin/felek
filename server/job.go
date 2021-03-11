@@ -14,47 +14,57 @@ type job struct {
 	owner     string    // The username of the user who started the job
 }
 
-func jobStatus(j *job) *pb.JobStatus {
+func (j *job) exitedWithExitCode() bool {
+	return j.exitError == nil && j.cmd.ProcessState != nil
+}
+
+func (j *job) running() bool {
+	return j.exitError == nil && j.cmd.ProcessState == nil
+}
+
+func (j *job) killedWithSignal() bool {
+	return j.exitError != nil
+}
+
+func (j *job) status() *pb.JobStatus {
 	cmd := j.cmd
-	if j.exitError == nil && cmd.ProcessState != nil {
-		// Job exited without exitError
-		return &pb.JobStatus{
-			Id: &pb.JobID{Value: j.id},
-			JobState: &pb.JobStatus_StoppedJob{
-				StoppedJob: &pb.StoppedJob{
-					Exit: &pb.StoppedJob_ExitCode{
-						ExitCode: int64(cmd.ProcessState.ExitCode()),
-					},
-					SystemTime: int64(cmd.ProcessState.SystemTime()),
-					UserTime:   int64(cmd.ProcessState.UserTime()),
-					Stopped:    j.stopped,
-				},
-			},
-		}
-	} else if cmd.ProcessState == nil {
-		// Job still running
-		return &pb.JobStatus{
-			Id: &pb.JobID{Value: j.id},
-			JobState: &pb.JobStatus_RunningJob{
-				RunningJob: &pb.RunningJob{Pid: int64(j.cmd.Process.Pid)},
-			},
-		}
-	} else {
-		// Job exited with exitError
-		return &pb.JobStatus{
-			Id: &pb.JobID{Value: j.id},
-			JobState: &pb.JobStatus_StoppedJob{
-				StoppedJob: &pb.StoppedJob{
-					Exit: &pb.StoppedJob_ExitError{
-						ExitError: j.exitError.Error(),
-					},
-					SystemTime: int64(cmd.ProcessState.SystemTime()),
-					UserTime:   int64(cmd.ProcessState.UserTime()),
-					Stopped:    j.stopped,
-				},
-			},
-		}
+	status := &pb.JobStatus{
+		Id: &pb.JobID{Value: j.id},
 	}
+
+	if j.exitedWithExitCode() {
+		status.JobState = &pb.JobStatus_StoppedJob{
+			StoppedJob: &pb.StoppedJob{
+				Exit: &pb.StoppedJob_ExitCode{
+					ExitCode: int64(cmd.ProcessState.ExitCode()),
+				},
+				SystemTime: int64(cmd.ProcessState.SystemTime()),
+				UserTime:   int64(cmd.ProcessState.UserTime()),
+				Stopped:    j.stopped,
+			},
+		}
+		return status
+	}
+
+	if j.running() {
+		status.JobState = &pb.JobStatus_RunningJob{
+			RunningJob: &pb.RunningJob{Pid: int64(j.cmd.Process.Pid)},
+		}
+		return status
+	}
+
+	// If job is not running and has exitCode, it was killed with a signal
+	status.JobState = &pb.JobStatus_StoppedJob{
+		StoppedJob: &pb.StoppedJob{
+			Exit: &pb.StoppedJob_ExitError{
+				ExitError: j.exitError.Error(),
+			},
+			SystemTime: int64(cmd.ProcessState.SystemTime()),
+			UserTime:   int64(cmd.ProcessState.UserTime()),
+			Stopped:    j.stopped,
+		},
+	}
+	return status
 }
 
 // newJob creates a job struct for a new Cmd, assigning it a UUID

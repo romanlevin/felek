@@ -14,10 +14,16 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
-	pb.RegisterJobsServer(s, newServer())
+	gRPCServer := grpc.NewServer()
+
+	jobServer, err := newServer()
+	if err != nil {
+		log.Fatalf("error creating jobs server: %s", err.Error())
+	}
+
+	pb.RegisterJobsServer(gRPCServer, jobServer)
 	log.Print("Serving gRPC service")
-	if err := s.Serve(lis); err != nil {
+	if err := gRPCServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

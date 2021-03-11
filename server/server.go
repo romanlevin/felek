@@ -18,14 +18,14 @@ type server struct {
 	logDir   string
 }
 
-func newServer() *server {
+func newServer() (*server, error) {
 	logDir, err := ioutil.TempDir("", "felek-logs-*")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	s := &server{jobs: make(map[string]*job), logDir: logDir, jobsLock: &sync.RWMutex{}}
-	return s
+	return s, nil
 }
 
 func (s *server) storeJob(j *job) {
@@ -74,36 +74,36 @@ func (s *server) Start(ctx context.Context, request *pb.JobStartRequest) (*pb.Jo
 	log.Printf("Started job (%v): %#v %#v", job.id, job.cmd.Path, job.cmd.Args)
 	s.storeJob(job)
 	go s.waitOnJob(job)
-	return jobStatus(job), nil
+	return job.status(), nil
 }
 
 func (s *server) Stop(ctx context.Context, id *pb.JobID) (*pb.JobStatus, error) {
 	jobID := id.Value
-	j, ok := s.getJob(jobID)
+	job, ok := s.getJob(jobID)
 	if !ok {
 		return nil, fmt.Errorf("no such job id %v", jobID)
 	}
 
-	err := j.cmd.Process.Kill()
+	err := job.cmd.Process.Kill()
 	if err != nil {
-		return jobStatus(j), fmt.Errorf("failed to kill: %w", err)
+		return job.status(), fmt.Errorf("failed to kill: %w", err)
 	}
 
 	s.jobsLock.Lock()
 	defer s.jobsLock.Unlock()
-	j.stopped = true
+	job.stopped = true
 
-	return jobStatus(j), nil
+	return job.status(), nil
 }
 
 func (s *server) Status(ctx context.Context, id *pb.JobID) (*pb.JobStatus, error) {
 	jobID := id.Value
-	j, ok := s.getJob(jobID)
+	job, ok := s.getJob(jobID)
 	if !ok {
 		return nil, fmt.Errorf("no such job id %v", jobID)
 	}
 
-	return jobStatus(j), nil
+	return job.status(), nil
 }
 
 func (s *server) Stdout(request *pb.LogsRequest, logsServer pb.Jobs_StdoutServer) error {
