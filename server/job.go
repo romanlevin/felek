@@ -15,23 +15,23 @@ type job struct {
 }
 
 func jobStatus(j *job) *pb.JobStatus {
-	c := j.cmd
-	if j.exitError == nil && c.ProcessState != nil {
+	cmd := j.cmd
+	if j.exitError == nil && cmd.ProcessState != nil {
 		// Job exited without exitError
 		return &pb.JobStatus{
 			Id: &pb.JobID{Value: j.id},
 			JobState: &pb.JobStatus_StoppedJob{
 				StoppedJob: &pb.StoppedJob{
 					Exit: &pb.StoppedJob_ExitCode{
-						ExitCode: int64(c.ProcessState.ExitCode()),
+						ExitCode: int64(cmd.ProcessState.ExitCode()),
 					},
-					SystemTime: int64(c.ProcessState.SystemTime()),
-					UserTime:   int64(c.ProcessState.UserTime()),
+					SystemTime: int64(cmd.ProcessState.SystemTime()),
+					UserTime:   int64(cmd.ProcessState.UserTime()),
 					Stopped:    j.stopped,
 				},
 			},
 		}
-	} else if c.ProcessState == nil {
+	} else if cmd.ProcessState == nil {
 		// Job still running
 		return &pb.JobStatus{
 			Id: &pb.JobID{Value: j.id},
@@ -48,8 +48,8 @@ func jobStatus(j *job) *pb.JobStatus {
 					Exit: &pb.StoppedJob_ExitError{
 						ExitError: j.exitError.Error(),
 					},
-					SystemTime: int64(c.ProcessState.SystemTime()),
-					UserTime:   int64(c.ProcessState.UserTime()),
+					SystemTime: int64(cmd.ProcessState.SystemTime()),
+					UserTime:   int64(cmd.ProcessState.UserTime()),
 					Stopped:    j.stopped,
 				},
 			},
