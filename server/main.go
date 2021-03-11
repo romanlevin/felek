@@ -56,8 +56,8 @@ func main() {
 	t := time.NewTimer(gracefulStopTimeout)
 	select {
 	case <-t.C:
-		gRPCServer.Stop()
 		log.Print("Timed out, forcing a shutdown")
+		gRPCServer.Stop()
 	case <-stopped:
 		t.Stop()
 		log.Print("Server shut down gracefully")
