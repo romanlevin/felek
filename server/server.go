@@ -8,12 +8,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"sync"
 )
 
 type server struct {
 	pb.UnimplementedJobsServer
-	jobsLock *sync.RWMutex
 	jobs     map[string]*job
 	logDir   string
 }
@@ -24,38 +22,18 @@ func newServer() (*server, error) {
 		return nil, err
 	}
 
-	s := &server{jobs: make(map[string]*job), logDir: logDir, jobsLock: &sync.RWMutex{}}
+	s := &server{jobs: make(map[string]*job), logDir: logDir}
 	return s, nil
 }
 
 func (s *server) storeJob(j *job) {
-	s.jobsLock.Lock()
-	defer s.jobsLock.Unlock()
 	s.jobs[j.id] = j
 }
 
 func (s *server) getJob(id string) (*job, bool) {
-	s.jobsLock.RLock()
-	defer s.jobsLock.RUnlock()
 	j, ok := s.jobs[id]
 	return j, ok
 
-}
-
-// waitOnJob is meant to be run as a goroutine
-// It captures the process's exit error in case it is killed by a signal
-// Calling Wait on the exec.Cmd is also necessary to update ProcessState
-func (s *server) waitOnJob(j *job) {
-	err := j.cmd.Wait()
-	if err != nil {
-		s.jobsLock.Lock()
-		defer s.jobsLock.Unlock()
-		j.exitError = err
-		log.Printf("job %v exited with error %#v", j.id, j.exitError)
-	}
-	log.Printf("job %v exited with exit code %v", j.id, j.cmd.ProcessState.ExitCode())
-
-	// TODO close log file handlers
 }
 
 func (s *server) Start(ctx context.Context, request *pb.JobStartRequest) (*pb.JobStatus, error) {
@@ -73,7 +51,7 @@ func (s *server) Start(ctx context.Context, request *pb.JobStartRequest) (*pb.Jo
 	job := newJob(cmd, "")
 	log.Printf("Started job (%v): %#v %#v", job.id, job.cmd.Path, job.cmd.Args)
 	s.storeJob(job)
-	go s.waitOnJob(job)
+	go job.wait()
 	return job.status(), nil
 }
 
@@ -84,14 +62,10 @@ func (s *server) Stop(ctx context.Context, id *pb.JobID) (*pb.JobStatus, error) 
 		return nil, fmt.Errorf("no such job id %v", jobID)
 	}
 
-	err := job.cmd.Process.Kill()
+	err := job.stop()
 	if err != nil {
-		return job.status(), fmt.Errorf("failed to kill: %w", err)
+		return nil, fmt.Errorf("failed to stop: %w", err)
 	}
-
-	s.jobsLock.Lock()
-	defer s.jobsLock.Unlock()
-	job.stopped = true
 
 	return job.status(), nil
 }
