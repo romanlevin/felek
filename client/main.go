@@ -2,12 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
-	"os"
-	"time"
-
+	"fmt"
 	"github.com/romanlevin/felek/jobs"
 	"google.golang.org/grpc"
+	"log"
+	"os"
 )
 
 const (
@@ -20,62 +19,78 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := jobs.NewJobsClient(conn)
+	client := jobs.NewJobsClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	ctx := context.Background()
+
+	if len(os.Args) < 3 {
+		log.Fatalf("expecting command argument")
+	}
 
 	switch command := os.Args[1]; command {
 	case "run":
-		runJob(c, ctx)
+		err = runJob(ctx, client)
 	case "status":
-		statusJob(c, ctx)
+		err = statusJob(ctx, client)
 	case "stop":
-		stopJob(c, ctx)
+		err = stopJob(ctx, client)
 	default:
 		log.Fatalf("must run with %s [run|status|stop] ..., instead got %s", os.Args[0], os.Args[1])
 	}
+
+	if err != nil {
+		log.Fatalf("error encountered: %s", err.Error())
+	}
 }
 
-func runJob(c jobs.JobsClient, ctx context.Context) {
+func runJob(ctx context.Context, client jobs.JobsClient) error {
 	request := &jobs.JobStartRequest{
 		Path: os.Args[2],
 		Args: os.Args[3:],
 	}
 	log.Printf("sending request %v", request)
-	r, err := c.Start(ctx, request)
+	status, err := client.Start(ctx, request)
 	if err != nil {
-		log.Fatalf("could not start: %#v", err.Error())
+		return fmt.Errorf("could not start: %w", err)
 	}
-	log.Printf("Job name: %v", r)
+	if err = logJobStatus(status); err != nil {
+		return err
+	}
+	return nil
 }
 
-func stopJob(c jobs.JobsClient, ctx context.Context) {
+func stopJob(ctx context.Context, client jobs.JobsClient) error {
 	id := &jobs.JobID{Value: os.Args[2]}
-	status, err := c.Stop(ctx, id)
+	status, err := client.Stop(ctx, id)
 	if err != nil {
-		log.Fatalf("could not kill: %#v", err.Error())
+		return fmt.Errorf("could not kill: %w", err)
 	}
-	logJobStatus(status)
+	if err = logJobStatus(status); err != nil {
+		return err
+	}
+	return nil
 }
 
-func statusJob(c jobs.JobsClient, ctx context.Context) {
+func statusJob(ctx context.Context, client jobs.JobsClient) error {
 	id := &jobs.JobID{Value: os.Args[2]}
-	status, err := c.Status(ctx, id)
+	status, err := client.Status(ctx, id)
 	if err != nil {
-		log.Fatalf("could not get status: %#v", err.Error())
+		return fmt.Errorf("could not get status: %w", err)
 	}
-	logJobStatus(status)
+	if err = logJobStatus(status); err != nil {
+		return err
+	}
+	return nil
 }
 
-func logJobStatus(status *jobs.JobStatus) {
+func logJobStatus(status *jobs.JobStatus) error {
 	switch jobState := status.JobState.(type) {
 	case *jobs.JobStatus_StoppedJob:
 		log.Printf("stopped job(%s): %v, stopped by user: %t", status.Id.Value, jobState.StoppedJob, jobState.StoppedJob.Stopped)
 	case *jobs.JobStatus_RunningJob:
 		log.Printf("running job(%s): %v", status.Id.Value, jobState.RunningJob)
 	default:
-		log.Fatalf("JobStatus.JobState has unexpected type %T", jobState)
-
+		return fmt.Errorf("JobStatus.JobState has unexpected type %T", jobState)
 	}
+	return nil
 }
