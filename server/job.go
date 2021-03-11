@@ -7,16 +7,16 @@ import (
 )
 
 type job struct {
-	id        string
-	cmd       *exec.Cmd
-	stopped   bool
-	exitError string
-	owner     string
+	id        string    // A UUID string
+	cmd       *exec.Cmd // The underlying Cmd object wrapping the job process
+	stopped   bool      // Has this job been stopped by a client?
+	exitError error     // The error returned by Wait on the Cmd
+	owner     string    // The username of the user who started the job
 }
 
 func jobStatus(j *job) *pb.JobStatus {
 	c := j.cmd
-	if j.exitError == "" && c.ProcessState != nil {
+	if j.exitError == nil && c.ProcessState != nil {
 		// Job exited without exitError
 		return &pb.JobStatus{
 			Id: &pb.JobID{Value: j.id},
@@ -46,7 +46,7 @@ func jobStatus(j *job) *pb.JobStatus {
 			JobState: &pb.JobStatus_StoppedJob{
 				StoppedJob: &pb.StoppedJob{
 					Exit: &pb.StoppedJob_ExitError{
-						ExitError: j.exitError,
+						ExitError: j.exitError.Error(),
 					},
 					SystemTime: int64(c.ProcessState.SystemTime()),
 					UserTime:   int64(c.ProcessState.UserTime()),

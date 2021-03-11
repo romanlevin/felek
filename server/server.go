@@ -50,7 +50,7 @@ func (s *server) waitOnJob(j *job) {
 	if err != nil {
 		s.jobsLock.Lock()
 		defer s.jobsLock.Unlock()
-		j.exitError = err.Error()
+		j.exitError = err
 		log.Printf("job %v exited with error %#v", j.id, j.exitError)
 	}
 	log.Printf("job %v exited with exit code %v", j.id, j.cmd.ProcessState.ExitCode())
