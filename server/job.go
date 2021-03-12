@@ -88,9 +88,8 @@ func (j *job) status() *pb.JobStatus {
 
 // newJob creates a job struct for a new Cmd, assigning it a UUID
 func newJob(cmd *exec.Cmd, owner string) *job {
-	id := uuid.NewString()
 	return &job{
-		id:    id,
+		id:    uuid.NewString(),
 		cmd:   cmd,
 		owner: owner,
 		lock: sync.RWMutex{},
