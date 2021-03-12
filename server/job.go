@@ -14,7 +14,7 @@ type job struct {
 	stopped   bool      // Has this job been stopped by a client?
 	exitError error     // The error returned by Wait on the Cmd
 	owner     string    // The username of the user who started the job
-	lock      *sync.RWMutex
+	lock      sync.RWMutex
 }
 
 // exitedWithExitCode assumes a lock is held
@@ -93,7 +93,7 @@ func newJob(cmd *exec.Cmd, owner string) *job {
 		id:    id,
 		cmd:   cmd,
 		owner: owner,
-		lock: &sync.RWMutex{},
+		lock: sync.RWMutex{},
 	}
 }
 
