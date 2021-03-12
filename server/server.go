@@ -8,11 +8,13 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sync"
 )
 
 type server struct {
 	pb.UnimplementedJobsServer
 	jobs     map[string]*job
+	jobsLock sync.RWMutex
 	logDir   string
 }
 
@@ -22,15 +24,19 @@ func newServer() (*server, error) {
 		return nil, err
 	}
 
-	s := &server{jobs: make(map[string]*job), logDir: logDir}
+	s := &server{jobs: make(map[string]*job), logDir: logDir, jobsLock: sync.RWMutex{}}
 	return s, nil
 }
 
 func (s *server) storeJob(j *job) {
+	s.jobsLock.Lock()
+	defer s.jobsLock.Unlock()
 	s.jobs[j.id] = j
 }
 
 func (s *server) getJob(id string) (*job, bool) {
+	s.jobsLock.RLock()
+	defer s.jobsLock.RUnlock()
 	j, ok := s.jobs[id]
 	return j, ok
 
