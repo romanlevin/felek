@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	pb "github.com/romanlevin/felek/jobs"
 	"log"
@@ -30,6 +31,10 @@ func (j *job) runningLocked() bool {
 func (j *job) stop() error {
 	j.lock.Lock()
 	defer j.lock.Unlock()
+
+	if j.stopped {
+		return fmt.Errorf("job has already been stopped")
+	}
 
 	if err := j.cmd.Process.Kill(); err != nil{
 		return err
