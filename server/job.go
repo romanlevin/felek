@@ -17,13 +17,13 @@ type job struct {
 	lock      sync.RWMutex
 }
 
-// exitedWithExitCode assumes a lock is held
-func (j *job) exitedWithExitCode() bool {
+// exitedWithExitCodeLocked assumes a lock is held
+func (j *job) exitedWithExitCodeLocked() bool {
 	return j.exitError == nil && j.cmd.ProcessState != nil
 }
 
-// running assumes a lock is held
-func (j *job) running() bool {
+// runningLocked assumes a lock is held
+func (j *job) runningLocked() bool {
 	return j.exitError == nil && j.cmd.ProcessState == nil
 }
 
@@ -51,14 +51,14 @@ func (j *job) status() *pb.JobStatus {
 		Id: &pb.JobID{Value: j.id},
 	}
 
-	if j.running() {
+	if j.runningLocked() {
 		status.JobState = &pb.JobStatus_RunningJob{
 			RunningJob: &pb.RunningJob{Pid: int64(j.cmd.Process.Pid)},
 		}
 		return status
 	}
 
-	if j.exitedWithExitCode() {
+	if j.exitedWithExitCodeLocked() {
 		status.JobState = &pb.JobStatus_StoppedJob{
 			StoppedJob: &pb.StoppedJob{
 				Exit: &pb.StoppedJob_ExitCode{
