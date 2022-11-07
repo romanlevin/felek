@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	pb "github.com/romanlevin/felek/jobs"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"sync"
+
+	pb "github.com/romanlevin/felek/jobs"
+	"golang.org/x/sync/errgroup"
 )
 
 type server struct {
@@ -19,12 +20,12 @@ type server struct {
 }
 
 func newServer() (*server, error) {
-	logDir, err := ioutil.TempDir("", "felek-logs-*")
+	logDir, err := os.CreateTemp("", "felek-logs-*")
 	if err != nil {
 		return nil, err
 	}
 
-	s := &server{jobs: make(map[string]*job), logDir: logDir, jobsLock: sync.RWMutex{}}
+	s := &server{jobs: make(map[string]*job), logDir: logDir.Name(), jobsLock: sync.RWMutex{}}
 	return s, nil
 }
 
@@ -74,6 +75,16 @@ func (s *server) Stop(ctx context.Context, id *pb.JobID) (*pb.JobStatus, error) 
 	}
 
 	return job.status(), nil
+}
+
+func (s *server) ShutDown() error {
+	s.jobsLock.Lock()
+	defer s.jobsLock.Unlock()
+	g := errgroup.Group{}
+	for _, job := range s.jobs {
+		g.Go(job.stop)
+	}
+	return g.Wait()
 }
 
 func (s *server) Status(ctx context.Context, id *pb.JobID) (*pb.JobStatus, error) {

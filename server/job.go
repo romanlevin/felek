@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	pb "github.com/romanlevin/felek/jobs"
 	"log"
 	"os/exec"
 	"sync"
+
+	"github.com/google/uuid"
+	pb "github.com/romanlevin/felek/jobs"
 )
 
 type job struct {
@@ -36,7 +37,7 @@ func (j *job) stop() error {
 		return fmt.Errorf("job has already been stopped")
 	}
 
-	if err := j.cmd.Process.Kill(); err != nil{
+	if err := j.cmd.Process.Kill(); err != nil {
 		return err
 	}
 
@@ -97,7 +98,7 @@ func newJob(cmd *exec.Cmd, owner string) *job {
 		id:    uuid.NewString(),
 		cmd:   cmd,
 		owner: owner,
-		lock: sync.RWMutex{},
+		lock:  sync.RWMutex{},
 	}
 }
 
@@ -110,9 +111,9 @@ func (j *job) wait() {
 		j.lock.Lock()
 		defer j.lock.Unlock()
 		j.exitError = err
-		log.Printf("job %v exited with error %#v", j.id, j.exitError)
+		log.Printf("job %v exited with error %s", j.id, j.exitError.Error())
 	}
-	log.Printf("job %v exited with exit code %v", j.id, j.cmd.ProcessState.ExitCode())
+	log.Printf("job %v exited with exit code %d", j.id, j.cmd.ProcessState.ExitCode())
 
 	// TODO close log file handlers
 }
