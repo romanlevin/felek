@@ -1,5 +1,9 @@
 # felek
 
+## Prerequisites
+
+In addition to `go`, you should also have the `protoc` compiler and [`protoc-gen-go`](https://grpc.io/docs/languages/go/quickstart/).
+
 ## Usage
 
 To generate protobuf and gRPC code for Go, run

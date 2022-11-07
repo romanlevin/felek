@@ -1,14 +1,15 @@
 package main
 
 import (
-	pb "github.com/romanlevin/felek/jobs"
-	"google.golang.org/grpc"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	pb "github.com/romanlevin/felek/jobs"
+	"google.golang.org/grpc"
 )
 
 const gracefulStopTimeout = 10 * time.Second
@@ -36,6 +37,9 @@ func main() {
 	go func() {
 		if err := gRPCServer.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %v", err)
+		}
+		if err := jobServer.ShutDown(); err != nil {
+			log.Printf("failed to gracefully shut down jobs: %v", err)
 		}
 		close(stopped)
 	}()

@@ -32,8 +32,6 @@ message JobStatus {
 }
 
 message RunningJob {
-    // XXX: Don't know if we only want this available for running processes,
-    //      but otherwise I'm not sure what I can put in the RunningJob message
     int64 pid = 1; // PID of the job's root process
 }
 
